@@ -2,6 +2,117 @@ import { pushOrRemove } from "@/utils/arrayUtils";
 import { isProxy } from "vue";
 
 export default class TaskMethod {
+  toSuccessorList(successor) {
+    if (successor == null || successor === "" || successor === "fin") return [];
+    if (Array.isArray(successor)) return successor;
+    return successor.length > 1 ? [...successor] : [successor];
+  }
+
+  buildSchedule(data) {
+    const tasks = new Map();
+    const successors = new Map();
+    const predecessors = new Map();
+
+    data.forEach(([task, duration, successor]) => {
+      if (!task) throw new Error("Chaque tache doit avoir un nom.");
+      if (tasks.has(task)) throw new Error(`Tache dupliquee: ${task}`);
+
+      const numericDuration = Number(duration);
+      if (!Number.isFinite(numericDuration) || numericDuration < 0) {
+        throw new Error(`Duree invalide pour la tache ${task}.`);
+      }
+
+      tasks.set(task, numericDuration);
+      successors.set(task, this.toSuccessorList(successor));
+      predecessors.set(task, []);
+    });
+
+    successors.forEach((taskSuccessors, task) => {
+      taskSuccessors.forEach((successor) => {
+        if (!tasks.has(successor)) {
+          throw new Error(`Successeur inconnu "${successor}" pour la tache ${task}.`);
+        }
+        predecessors.get(successor).push(task);
+      });
+    });
+
+    const incomingCount = new Map(
+      Array.from(predecessors, ([task, taskPredecessors]) => [
+        task,
+        taskPredecessors.length,
+      ])
+    );
+    const queue = Array.from(incomingCount)
+      .filter(([, count]) => count === 0)
+      .map(([task]) => task);
+    const order = [];
+
+    while (queue.length) {
+      const task = queue.shift();
+      order.push(task);
+
+      successors.get(task).forEach((successor) => {
+        const nextCount = incomingCount.get(successor) - 1;
+        incomingCount.set(successor, nextCount);
+        if (nextCount === 0) queue.push(successor);
+      });
+    }
+
+    if (order.length !== tasks.size) {
+      throw new Error("Le graphe CPM contient un cycle.");
+    }
+
+    const earliestStart = new Map();
+    const earliestFinish = new Map();
+
+    order.forEach((task) => {
+      const start = Math.max(
+        0,
+        ...predecessors.get(task).map((predecessor) => earliestFinish.get(predecessor))
+      );
+      earliestStart.set(task, start);
+      earliestFinish.set(task, start + tasks.get(task));
+    });
+
+    const terminalTasks = Array.from(successors)
+      .filter(([, taskSuccessors]) => taskSuccessors.length === 0)
+      .map(([task]) => task);
+    const projectDuration = Math.max(
+      0,
+      ...terminalTasks.map((task) => earliestFinish.get(task))
+    );
+
+    const latestFinish = new Map();
+    const latestStart = new Map();
+
+    [...order].reverse().forEach((task) => {
+      const taskSuccessors = successors.get(task);
+      const finish = taskSuccessors.length
+        ? Math.min(...taskSuccessors.map((successor) => latestStart.get(successor)))
+        : projectDuration;
+
+      latestFinish.set(task, finish);
+      latestStart.set(task, finish - tasks.get(task));
+    });
+
+    const criticalTasks = order.filter(
+      (task) => latestStart.get(task) === earliestStart.get(task)
+    );
+
+    return {
+      tasks,
+      successors,
+      predecessors,
+      order,
+      earliestStart,
+      earliestFinish,
+      latestStart,
+      latestFinish,
+      projectDuration,
+      criticalTasks,
+    };
+  }
+
   getDureeTache(task, arr) {
     if (task == "deb") return 0;
     for (let tab of arr) {

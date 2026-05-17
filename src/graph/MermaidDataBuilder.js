@@ -4,6 +4,7 @@ export default class MermaidDataBuilder extends TaskMethod {
   constructor(dataPrincipal) {
     super();
     this.dataPrincipal = dataPrincipal;
+    this.schedule = this.buildSchedule(dataPrincipal);
     this.allDateTot = this.getDateTot();
     this.criticalPathData = this.getTacheCritique();
     this.allDateTard = this.getCheminMinimal();
@@ -11,67 +12,17 @@ export default class MermaidDataBuilder extends TaskMethod {
   }
 
   getDateTot() {
-    let arr = this.dataPrincipal.map((item) =>
-      Array.isArray(item) ? [...item] : item
-    );
-
-    for (let tab of arr) {
-      let taskPred = this.getTachePredecesseur(tab[0], arr);
-
-      if (taskPred.length > 1 && taskPred != "deb") {
-        let max = 0;
-        for (let task of taskPred) {
-          max = Math.max(max, this.getDureeTache(task, arr));
-        }
-        tab[1] = max + this.getDureeTache(tab[0], arr);
-      } else {
-        tab[1] =
-          this.getDureeTache(taskPred, arr) + this.getDureeTache(tab[0], arr);
-      }
-    }
-    return arr;
+    return this.dataPrincipal.map(([task, , successor]) => [
+      task,
+      this.schedule.earliestFinish.get(task),
+      successor,
+    ]);
   }
   getTacheCritique() {
-    let lastTask = "fin";
-    let chemin = [];
-
-    while (lastTask != "deb") {
-      lastTask = this.getTacheCheminC(lastTask, this.allDateTot);
-      chemin.push(lastTask);
-    }
-
-    return chemin;
+    return this.schedule.criticalTasks;
   }
   getCheminMinimal() {
-    let copyOfPrincipalTable = this.dataPrincipal.map((item) =>
-      Array.isArray(item) ? [...item] : item
-    );
-    let copyOfTableauVerifier = this.allDateTot.map((item) =>
-      Array.isArray(item) ? [...item] : item
-    );
-
-    let minTable = [];
-
-    const finDuraiton = this.getMaxFin(copyOfTableauVerifier.reverse());
-
-    copyOfPrincipalTable.reverse().forEach(([task, duration, successeur]) => {
-      if (successeur == "fin") {
-        minTable.push([task, finDuraiton - duration]);
-      } else if (Array.isArray(successeur)) {
-        let min = finDuraiton;
-        successeur.forEach((suc) => {
-          if (min >= this.getDureeTache(suc, minTable))
-            min = this.getDureeTache(suc, minTable);
-        });
-        minTable.push([task, min - duration]);
-      } else
-        minTable.push([
-          task,
-          this.getDureeTache(successeur, minTable) - duration,
-        ]);
-    });
-
-    return new Map(minTable);
+    return this.schedule.latestStart;
   }
   mappedToMermaidData() {
     let mappedData = [];
