@@ -1,0 +1,25 @@
+:root{
+    --success : #21d096;
+    --primary : #1faee7;
+    --danger : #fd6464;
+}
+
+.text-success-virtual{
+ color: var(--success) !important;   
+}
+.text-primary{
+    color: var(--primary) !important;
+}
+.text-danger{
+    color: var(--danger) !important;
+}
+
+.btn-primary {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+
+.btn-success {
+    background-color: var(--success) !important;
+    border-color: var(--success) !important;
+}

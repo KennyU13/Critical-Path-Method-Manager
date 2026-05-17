@@ -1,0 +1,8 @@
+<svg width="250" height="180" xmlns="http://www.w3.org/2000/svg">
+
+   <ellipse stroke-width="5" ry="75" rx="117.5" id="svg_1" cy="89" cx="123.5" stroke="#000" fill="#fff"/>
+   <line stroke-width="5" stroke-linecap="undefined" stroke-linejoin="undefined" id="svg_2" y2="167.1611" x2="125" y1="15" x1="125" stroke="#000" fill="none"/>
+   <text transform="matrix(1.67087, 0, 0, 1.71879, -84.5296, -127.776)" xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="24" id="svg_3" y="133.60162" x="85.30264" stroke-width="0" stroke="#000" fill="#ff0000">14</text>
+   <text transform="matrix(1.67087, 0, 0, 1.71879, -84.5296, -127.776)" xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="24" id="svg_4" y="133.60165" x="139.16679" stroke-width="0" stroke="#000" fill="#0083ff">29</text>
+
+</svg>

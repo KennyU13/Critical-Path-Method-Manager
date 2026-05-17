@@ -1,0 +1,317 @@
+<template>
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-4">
+        <div class="form-group mb-5">
+          <label for="usr">Nouveau tableau de "a" à</label>
+          <div class="d-flex">
+            <input
+              type="text"
+              maxlength="1"
+              class="form-control me-2"
+              id="usr"
+              v-model="tableEnd"
+            />
+            <!-- <button type="button" class="btn btn-outline-success btn-sm" @click="showTableFromInput()">nouveau</button> -->
+          </div>
+        </div>
+        <div v-if="tableEnd.length" class="row d-flex">
+          <div
+            class="input-group mb-1 col-5 d-flex flex-inline inputXX"
+            v-for="(tab, index) of newTab"
+            :key="index"
+          >
+            <span class="input-group-text inputSpan">{{ tab[0] }}</span>
+            <input type="number" class="form-control inputNumber" v-model="newTab[index][1]" />
+            <input type="text" class="form-control inputText" v-model="newTab[index][2]" />
+          </div>
+          <button
+            type="button"
+            class="btn btn-outline-success btn-sm my-3"
+            @click="showTableFromInput()"
+          >
+            Créer
+          </button>
+          <button type="button" class="btn btn-outline-success btn-sm" @click="showDefaultTable()">
+            Tableau par défaut
+          </button>
+        </div>
+      </div>
+      <div class="col-8">
+        <table class="table" v-if="tableau.length == 0">
+          <thead>
+            <tr>
+              <th>Tâche</th>
+              <th v-for="x of defaultTab" :key="x[0]">{{ x[0] }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="success">
+              <td>Durée</td>
+              <td v-for="x of defaultTab" :key="x[0]">{{ x[1] }}</td>
+            </tr>
+            <tr class="danger">
+              <td>T.Suc.</td>
+              <td v-for="x of defaultTab" :key="x[0]">{{ x[2].toString() }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <table class="table" v-else>
+          <thead>
+            <tr>
+              <th>Tâche</th>
+              <th v-for="x of newTab" :key="x[0]">{{ x[0] }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="success">
+              <td>Durée</td>
+              <td v-for="x of newTab" :key="x[0]">{{ x[1] }}</td>
+            </tr>
+            <tr class="danger">
+              <td>T.Suc.</td>
+              <td v-for="x of newTab" :key="x[0]">{{ x[2].toString() }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <button type="button" class="btn btn-success btn-sm my-3 me-3" @click="showGraph()">
+          Afficher les chemin critiques
+        </button>
+        <button
+          type="button"
+          class="btn btn-success btn-sm my-3 me-3"
+          @click="showGraphWithCriticalTask()"
+        >
+          Tracer les tâches critiques
+        </button>
+        <button
+          type="button"
+          class="btn btn-success btn-sm my-3"
+          @click="showGraphWithMinimalPath()"
+        >
+          Afficher les chemin minimal
+        </button>
+
+        <div v-if="show">
+          <div class="mermaid">
+            {{ mermaidCode }}
+          </div>
+        </div>
+        <div v-if="showCritical">
+          <div class="mermaidCritical">
+            {{ mermaidCode }}
+          </div>
+        </div>
+        <div v-if="showMinimalPath">
+          <div class="mermaidMinimalPath">
+            {{ mermaidCode }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import mermaid from 'mermaid'
+import {
+  linkText,
+  nodeShapeStart,
+  nodeShapeEnd,
+  verifierTableau,
+  getTachePredecesseur,
+  getTacheSuccesseur,
+  getDureeTache,
+  getTacheCritique,
+  nodeShape,
+  getCheminMinimal,
+  getMaxFin,
+} from '@/graph'
+export default {
+  data() {
+    return {
+      mockAlphabet: 'abcdefghijklmnopqrstuvwxyz',
+      defaultTab: [
+        ['a', 7, 'b'],
+        ['b', 7, 'c'],
+        ['c', 15, 'd'],
+        ['d', 30, ['e', 'g', 'h']],
+        ['e', 45, 'f'],
+        ['f', 15, 'k'],
+        ['g', 45, 'm'],
+        ['h', 60, 'i'],
+        ['i', 20, 'j'],
+        ['j', 30, 'm'],
+        ['k', 30, 'l'],
+        ['l', 15, 'm'],
+        ['m', 30, ['n', 'p']],
+        ['n', 15, 'o'],
+        ['o', 30, 'q'],
+        ['p', 15, 't'],
+        ['q', 15, ['r', 's']],
+        ['r', 15, ['u', 'w']],
+        ['s', 30, ['v', 'w']],
+        ['t', 7, ['u', 'v']],
+        ['u', 4, 'fin'],
+        ['v', 2, 'fin'],
+        ['w', 7, 'fin'],
+      ],
+      verifiedTab: [],
+      newTab: [],
+      tableau: [],
+      tableEnd: '',
+      mermaidCode: '',
+      show: false,
+      showCritical: false,
+      showMinimalPath: false,
+    }
+  },
+  mounted() {
+    // this.showGraph()
+  },
+  watch: {
+    tableEnd(value) {
+      if (value.length > 1) this.tableEnd = ''
+      else {
+        this.newTab = []
+        for (let index = 0; index < this.mockAlphabet.indexOf(value) + 1; index++) {
+          this.newTab.push([this.mockAlphabet[index], 0, ''])
+        }
+      }
+    },
+  },
+  methods: {
+    // extractData(value) {
+    //   return value.length == 1 ? value : value.toString()
+    // },
+    showTableFromInput() {
+      this.show = false
+      this.showCritical = false
+      this.tableau = this.newTab
+      for (let tab of this.tableau) {
+        tab[2] = tab[2].toLowerCase()
+        if (tab[2].length > 1 && tab[2].indexOf(',') > -1) {
+          tab[2] = tab[2].split(',')
+        }
+      }
+    },
+    showDefaultTable() {
+      this.show = false
+      this.showCritical = false
+      this.showMinimalPath = false
+      this.tableau = this.newTab = []
+      this.tableEnd = ''
+    },
+    generateMermaidCode(critical, minimalPath) {
+      this.show = !critical
+      this.showCritical = !this.show && !minimalPath
+      this.showMinimalPath = minimalPath && !this.show
+
+      let tablePrincipale = this.tableau.length > 1 ? this.tableau : this.defaultTab
+      let data = verifierTableau(this.tableau.length > 1 ? this.tableau : this.defaultTab)
+
+      let tableCheminCritique = critical ? getTacheCritique(data) : false
+
+      let tableMinimalPath = critical && minimalPath ? getCheminMinimal(data, tablePrincipale) : ''
+
+      let mermaidText = `graph LR; \n`
+
+      data.forEach(([start, duration, to]) => {
+        if (
+          Array.isArray(getTachePredecesseur(start, data)) &&
+          !Array.isArray(getTacheSuccesseur(start, data))
+        ) {
+          getTachePredecesseur(start, data).forEach((task) => {
+            if (Array.isArray(getTacheSuccesseur(task, data))) {
+              let isCritique = false
+              let min = getMaxFin(data)
+
+              getTacheSuccesseur(task, data).forEach((e) => {
+                if (min >= getDureeTache(e, tableMinimalPath) ) {
+                  min = getDureeTache(e, tableMinimalPath)
+                }
+              })
+              let minimal = tableMinimalPath != '' ? min : '' 
+              if (Array.isArray(tableCheminCritique)) {
+                isCritique = tableCheminCritique.includes(task)
+              }
+              mermaidText += `${task}((${nodeShape(getDureeTache(task, data), minimal , isCritique)})) --0--> ${getTachePredecesseur(start, data).toString()}((x))\n`
+            }
+          })
+        } else {
+          mermaidText += `${nodeShapeStart(start, data, tableCheminCritique, tableMinimalPath)} --${linkText(start, tablePrincipale)}--> ${nodeShapeEnd(start, data, tableCheminCritique, tableMinimalPath)}\n`
+        }
+      })
+
+      if (
+        Array.isArray(getTachePredecesseur('fin', data)) &&
+        getTachePredecesseur('fin', data).length > 1
+      ) {
+        getTachePredecesseur('fin', data).forEach((pred) => {
+          let max = 0
+          getTachePredecesseur(pred, data).forEach(
+            (value) => (max = Math.max(max, getDureeTache(value, data))),
+          )
+          let maxFin = 0
+          maxFin = Math.max(maxFin, getDureeTache(pred, data))
+          let isCritique = false
+          if (Array.isArray(tableCheminCritique)) isCritique = tableCheminCritique.includes(pred)
+          let minimal = tableMinimalPath != '' ? getDureeTache(pred, tableMinimalPath) : ''
+          mermaidText += `${getTachePredecesseur(pred, data).toString()}((${nodeShape(max, minimal, isCritique)})) --${linkText(pred, tablePrincipale)}--> fin((fin - ${maxFin}))\n`
+        })
+      }
+
+      this.mermaidCode = mermaidText
+    },
+
+    showGraph() {
+      mermaid.initialize({
+        // startOnLoad: true,
+        themeVariables: {
+          nodeWidth: '200px',
+          nodeHeight: '100px',
+        },
+      })
+      this.generateMermaidCode(false, false)
+      this.$nextTick(() => {
+        mermaid.init(undefined, this.$el.querySelectorAll('.mermaid'))
+      })
+    },
+    showGraphWithCriticalTask() {
+      this.mermaidCode = ''
+      this.show = false
+
+      this.generateMermaidCode(true, false)
+      this.$nextTick(() => {
+        mermaid.init(undefined, this.$el.querySelectorAll('.mermaidCritical'))
+      })
+    },
+    showGraphWithMinimalPath() {
+      this.mermaidCode = ''
+      this.show = false
+
+      this.generateMermaidCode(true, true)
+      this.$nextTick(() => {
+        mermaid.init(undefined, this.$el.querySelectorAll('.mermaidMinimalPath'))
+      })
+    },
+  },
+}
+</script>
+<style scoped>
+.inputXX {
+  min-width: 140px !important;
+  max-width: 140px !important;
+}
+.inputNumber {
+  min-width: 70px !important;
+  max-width: 70px !important;
+}
+.inputText {
+  min-width: 110px !important;
+  max-width: 110px !important;
+}
+.inputSpan {
+  min-width: 40px !important;
+  max-width: 40px !important;
+}
+</style>
