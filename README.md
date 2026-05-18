@@ -6,6 +6,10 @@ Application Vue 3 / Vite pour calculer et visualiser un graphe CPM.
 
 CPM Manager aide a modeliser des taches, leurs durees et leurs successeurs afin de generer un graphe Mermaid, calculer les dates au plus tot / au plus tard et identifier le chemin critique.
 
+## Demo
+
+![Demo Critical-Path-Method-Manager](docs/critical-path-method-manager-demo.png)
+
 ## Fonctionnalites
 
 - creation d'un tableau de taches
